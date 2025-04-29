@@ -21,7 +21,7 @@ import java.util.List;
 public class PatientController {
     private final PatientService patientService;
 
-    @PostMapping("/doctor/{doctorId}")
+    @PostMapping("/{id}/doctor/{doctorId}")
     public ResponseEntity<Patient> createPatient(
             @PathVariable Integer doctorId,
             @RequestBody Patient patient) {

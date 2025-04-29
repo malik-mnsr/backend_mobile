@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-
+@CrossOrigin(origins = "http://192.168.224.33")  // Adjust as needed
 @RestController
 @RequestMapping("/api/doctors")
 @RequiredArgsConstructor
@@ -50,6 +50,7 @@ public class DoctorController {
         doctorService.deleteDoctor(id);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping(value = "/{id}/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadProfilePicture(
             @PathVariable Integer id,
@@ -64,4 +65,21 @@ public class DoctorController {
                 .contentType(MediaType.parseMediaType(doctorService.getContentType(id)))
                 .body(doctorService.getProfilePicture(id));
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestParam(required = true) String email, @RequestParam(required = true) String phone) {
+        if (email.isEmpty() || phone.isEmpty()) {
+            return ResponseEntity.badRequest().body("Email and phone are required.");
+        }
+
+        // Authenticate doctor using email and phone
+        Doctor doctor = doctorService.getDoctorByEmailAndPhone(email, phone);
+
+        if (doctor != null) {
+            return ResponseEntity.ok(doctor); // Return the Doctor object if authentication is successful
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+        }
+    }
 }
+

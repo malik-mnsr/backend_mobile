@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -44,4 +47,8 @@ public class Doctor {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private WorkingMode currentMode = WorkingMode.NORMAL;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Patient> patients = new ArrayList<>();
+
 }

@@ -18,7 +18,8 @@ import java.util.List;
 public class Doctor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
+
 
     @Column(length = 50)
     private String firstName;
@@ -47,6 +48,13 @@ public class Doctor {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private WorkingMode currentMode = WorkingMode.NORMAL;
+    @Column(length = 1024)
+    private String gAccessToken;
+
+    @Column(length = 1024)
+    private String gRefreshToken;
+
+    private Long gTokenExpiryMs;   // epoch millis
 
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Patient> patients = new ArrayList<>();

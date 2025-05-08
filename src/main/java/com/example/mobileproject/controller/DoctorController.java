@@ -32,7 +32,7 @@ public class DoctorController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Doctor> getDoctor(@PathVariable Integer id) {
+    public ResponseEntity<Doctor> getDoctor(@PathVariable long id) {
         return ResponseEntity.ok(doctorService.getDoctorById(id));
     }
 
@@ -47,26 +47,26 @@ public class DoctorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Doctor> updateDoctor(@PathVariable Integer id, @RequestBody Doctor doctor) {
+    public ResponseEntity<Doctor> updateDoctor(@PathVariable long id, @RequestBody Doctor doctor) {
         return ResponseEntity.ok(doctorService.updateDoctor(id, doctor));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDoctor(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteDoctor(@PathVariable long id) {
         doctorService.deleteDoctor(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/{id}/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadProfilePicture(
-            @PathVariable Integer id,
+            @PathVariable long id,
             @RequestParam("file") MultipartFile file) throws IOException {
         doctorService.updateProfilePicture(id, file);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/profile-picture")
-    public ResponseEntity<byte[]> getProfilePicture(@PathVariable Integer id) {
+    public ResponseEntity<byte[]> getProfilePicture(@PathVariable long id) {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(doctorService.getContentType(id)))
                 .body(doctorService.getProfilePicture(id));

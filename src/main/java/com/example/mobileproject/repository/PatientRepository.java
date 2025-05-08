@@ -7,9 +7,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-public interface PatientRepository extends JpaRepository<Patient, Integer> {
+public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByEmail(String email);
-    List<Patient> findByDoctorId(Integer doctorId);
+    List<Patient> findByDoctorId(long doctorId);
     boolean existsByEmail(String email);
 
 }

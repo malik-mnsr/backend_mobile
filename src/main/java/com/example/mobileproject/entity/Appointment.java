@@ -1,51 +1,90 @@
 package com.example.mobileproject.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+/**
+ * Un rendez-vous réservé par un patient sur un créneau proposé par un médecin.
+ */
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
 @Entity
-@Table(name = "appointments")
+@Table(
+        name = "appointments",
+        uniqueConstraints = @UniqueConstraint(
+                name = "UK_appointment_slot",
+                columnNames = "slot_id"
+        )
+)
 public class Appointment {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer appointmentId;
+    private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id", nullable = false)
+    /** Créneau réservé – relation 1-1 obligatoire */
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "slot_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "FK_appointment_slot")
+    )
+    private Slot slot;
+
+    /** Patient ayant réservé le rendez-vous */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "patient_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "FK_appointment_patient")
+    )
     private Patient patient;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id", nullable = false)
-    private Doctor doctor;
-
-    @Column(nullable = false)
-    private LocalDateTime startTime;  // Changed from LocalDate to LocalDateTime
-
-    @Column(nullable = false)
-    private LocalDateTime endTime;    // Changed from LocalDate to LocalDateTime
-
+    /** Motif sélectionné (CONSULTATION, URGENCE, …) */
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private AppointmentType type;
+    private Motif motif;
 
+    /** État du rendez-vous (CONFIRMED, CANCELED, …) */
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private AppointmentStatus status;
+    private AppointmentStatus status = AppointmentStatus.CONFIRMED;
 
-    @Column(columnDefinition = "TEXT")  // For longer notes
+    /** Notes libres côté médecin */
+    @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
-    private boolean reminderSent;
+    /** ID brut de l’événement Google Calendar (si besoin) */
+    @Column(length = 128)
+    private String googleEventId;
 
-    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
-    private MedicalRecord medicalRecord;
+    /** URL HTML complète pour visualiser l’événement dans Google Calendar */
+    @Column(name = "google_event_link", length = 512)
+    private String googleEventLink;
+
+    /** Dates de création / mise à jour (gérées par Hibernate) */
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+
+    /* ───────────── Helpers pour exposer start/end via Slot ───────────── */
+
+    /** Date + heure de début du rendez-vous (dérivée du Slot) */
+    @Transient
+    public LocalDateTime getStart() {
+        return slot != null ? slot.getStartAt() : null;
+    }
+
+    /** Date + heure de fin du rendez-vous (dérivée du Slot) */
+    @Transient
+    public LocalDateTime getEnd() {
+        return slot != null ? slot.getEndAt() : null;
+    }
 }

@@ -5,9 +5,7 @@ import com.example.mobileproject.repository.DoctorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.Resource;
 
-import javax.print.Doc;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -15,9 +13,11 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class DoctorService {
+
     private final DoctorRepository doctorRepository;
 
-    // Create
+    /* ---------------------- CRUD ---------------------- */
+
     public Doctor createDoctor(Doctor doctor) {
         if (doctorRepository.existsByEmail(doctor.getEmail())) {
             throw new RuntimeException("Doctor with this email already exists");
@@ -25,13 +25,14 @@ public class DoctorService {
         return doctorRepository.save(doctor);
     }
 
-    // Read
-    public Doctor getDoctorById(Integer id) {
-        return doctorRepository.findById(id).orElseThrow(() -> new RuntimeException("Doctor not found"));
+    public Doctor getDoctorById(Long id) {
+        return doctorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
     }
 
     public Doctor getDoctorByEmail(String email) {
-        return doctorRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Doctor not found"));
+        return doctorRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
     }
 
     public List<Doctor> getAllDoctors() {
@@ -42,59 +43,46 @@ public class DoctorService {
         return doctorRepository.findBySpecialty(specialty);
     }
 
-    // Update
-    public Doctor updateDoctor(Integer id, Doctor updatedDoctor) {
+    public Doctor updateDoctor(Long id, Doctor updated) {
         Doctor existing = getDoctorById(id);
-        existing.setFirstName(updatedDoctor.getFirstName());
-        existing.setLastName(updatedDoctor.getLastName());
-        existing.setSpecialty(updatedDoctor.getSpecialty());
-        existing.setPhone(updatedDoctor.getPhone());
+        existing.setFirstName(updated.getFirstName());
+        existing.setLastName(updated.getLastName());
+        existing.setSpecialty(updated.getSpecialty());
+        existing.setPhone(updated.getPhone());
         return doctorRepository.save(existing);
     }
 
-    // Delete
-    public void deleteDoctor(Integer id) {
+    public void deleteDoctor(Long id) {
         doctorRepository.deleteById(id);
     }
 
-    public void updateProfilePicture(Integer doctorId, MultipartFile file) throws IOException {
-        Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+    /* -------------------- PHOTO ----------------------- */
 
-        doctor.setProfilePicture(file.getBytes());
-        doctor.setProfilePictureContentType(file.getContentType());
-        doctorRepository.save(doctor);
+    public void updateProfilePicture(long doctorId, MultipartFile file) throws IOException {
+        Doctor doc = getDoctorById(doctorId);
+        doc.setProfilePicture(file.getBytes());
+        doc.setProfilePictureContentType(file.getContentType());
+        doctorRepository.save(doc);
     }
 
-    public byte[] getProfilePicture(Integer doctorId) {
-        return doctorRepository.findById(doctorId)
-                .map(Doctor::getProfilePicture)
-                .orElseThrow(() -> new RuntimeException("Doctor or image not found"));
+    public byte[] getProfilePicture(long doctorId) {
+        return getDoctorById(doctorId).getProfilePicture();
     }
 
-    public String getContentType(Integer doctorId) {
-        return doctorRepository.findById(doctorId)
-                .map(Doctor::getProfilePictureContentType)
-                .orElse("application/octet-stream");
+    public String getContentType(long doctorId) {
+        return getDoctorById(doctorId).getProfilePictureContentType();
     }
+
+    /* -------------------- LOGIN ----------------------- */
 
     public boolean authenticateDoctor(String email, String phone) {
-        // Using the Optional API to check if the Doctor is present
-        Optional<Doctor> doctorOptional = doctorRepository.findByEmail(email);
-
-        // If doctor exists, check if the phone number matches
-        if (doctorOptional.isPresent()) {
-            Doctor doctor = doctorOptional.get();  // Extract Doctor object from Optional
-            return doctor.getPhone().equals(phone);
-        }
-
-        // Return false if the doctor is not found
-        return false;
+        return doctorRepository.findByEmail(email)
+                .map(d -> d.getPhone().equals(phone))
+                .orElse(false);
     }
+
     public Doctor getDoctorByEmailAndPhone(String email, String phone) {
         return doctorRepository.findByEmailAndPhone(email, phone)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
     }
-
 }
-

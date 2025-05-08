@@ -5,8 +5,10 @@ import lombok.Data;
 
 import java.util.List;
 
-@Data
+/** Requête JSON envoyée pour créer un médecin + image Base64 + patients */
+@Data                // Lombok génère TOUS les getters / setters
 public class DoctorRequestWithBase64 {
+
     private String firstName;
     private String lastName;
     private int age;
@@ -14,9 +16,9 @@ public class DoctorRequestWithBase64 {
     private String specialty;
     private String phone;
     private WorkingMode currentMode;
-    private String profilePictureBase64;  // Base64-encoded image string
-    private List<PatientRequest> patients;
 
-    // Getters and setters
+
+    private String profilePictureBase64;
+
+    private List<PatientRequest> patients;   // sous‑DTO défini plus bas
 }
-

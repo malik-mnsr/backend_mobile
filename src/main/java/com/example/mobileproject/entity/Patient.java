@@ -15,7 +15,7 @@ import lombok.Setter;
 public class Patient {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;  // Changed to Integer (optional, but matches MySQL's INT)
+    private Long id;  // Changed to Integer (optional, but matches MySQL's INT)
 
     @Column(length = 100, unique = true)  // Email should be unique and reasonably sized
     private String email;

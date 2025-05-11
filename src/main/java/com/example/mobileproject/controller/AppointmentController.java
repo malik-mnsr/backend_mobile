@@ -2,13 +2,9 @@ package com.example.mobileproject.controller;
 
 import com.example.mobileproject.dto.AppointmentDTO;
 import com.example.mobileproject.dto.ReserveRequest;
-import com.example.mobileproject.dto.SlotDTO;
-import com.example.mobileproject.dto.PatientDTO;
 import com.example.mobileproject.entity.Appointment;
 import com.example.mobileproject.entity.Motif;
 import com.example.mobileproject.service.AppointmentService;
-import com.example.mobileproject.service.PatientService;
-import com.example.mobileproject.service.SlotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,60 +20,61 @@ import java.util.stream.Collectors;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
-    private final SlotService slotService;      // mapping Slot → SlotDTO
-    private final PatientService patientService;   // mapping Patient → PatientDTO
 
-    /* ─────────── RÉSERVATION ─────────── */
+    /** 1. Réserver un créneau */
     @PostMapping("/reserve/{slotId}")
-    public ResponseEntity<AppointmentDTO> reserve(@PathVariable Long slotId,
-                                                  @RequestBody ReserveRequest req) throws IOException {
+    public ResponseEntity<AppointmentDTO> reserve(
+            @PathVariable Long slotId,
+            @RequestBody ReserveRequest req) throws IOException {
 
         Appointment appt = appointmentService.reserve(
                 slotId,
                 req.patientId(),
                 Motif.valueOf(req.motif())
         );
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(toDto(appt));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(appointmentService.toDto(appt));
     }
 
-    /* ─────────── ANNULATION ─────────── */
+    /** 2. Annuler un RDV */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> cancel(@PathVariable Long id) throws IOException {
         appointmentService.cancel(id);
         return ResponseEntity.noContent().build();
     }
 
-    /* ─────────── LISTE MÉDECIN ─────────── */
+    /** 3a. Accepter une demande PENDING */
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<AppointmentDTO> accept(@PathVariable Long id) throws IOException {
+        Appointment appt = appointmentService.accept(id);
+        return ResponseEntity.ok(appointmentService.toDto(appt));
+    }
+
+    /** 3b. Rejeter une demande PENDING */
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Void> reject(@PathVariable Long id) {
+        appointmentService.reject(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 4a. Liste des RDV d’un médecin */
     @GetMapping("/doctor/{doctorId}")
     public ResponseEntity<List<AppointmentDTO>> listByDoctor(@PathVariable Long doctorId) {
-        return ResponseEntity.ok(
-                appointmentService.findByDoctorId(doctorId).stream()
-                        .map(this::toDto)
-                        .collect(Collectors.toList()));
+        List<AppointmentDTO> dtos = appointmentService.findByDoctorId(doctorId)
+                .stream()
+                .map(appointmentService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
-    /* ─────────── LISTE PATIENT ─────────── */
+    /** 4b. Liste des RDV d’un patient */
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<AppointmentDTO>> listByPatient(@PathVariable Long patientId) {
-        return ResponseEntity.ok(
-                appointmentService.findByPatientId(patientId).stream()
-                        .map(this::toDto)
-                        .collect(Collectors.toList()));
-    }
-
-    /* ─────────── Helper mapping Appointment → DTO ─────────── */
-    private AppointmentDTO toDto(Appointment a) {
-        String link = a.getGoogleEventLink();  // c’est déjà l’URL complète
-        return new AppointmentDTO(
-                a.getId(),
-                slotService.toDto(a.getSlot()),
-                patientService.toDto(a.getPatient()),
-                a.getMotif().name(),
-                a.getStatus().name(),
-                a.getGoogleEventLink()
-        );
-
-
+        List<AppointmentDTO> dtos = appointmentService.findByPatientId(patientId)
+                .stream()
+                .map(appointmentService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 }

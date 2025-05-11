@@ -29,8 +29,8 @@ public class AppointmentService {
 
     /**
      * Réserve un slot selon le motif :
-     * - auto‐confirmé (CONSULTATION, TELECONSULTATION)
-     * - en attente (HOME_VISIT, EMERGENCY) + notification FCM
+     * auto‐confirmé (CONSULTATION, TELECONSULTATION)
+     * en attente (HOME_VISIT, EMERGENCY) + notification FCM
      */
     @Transactional
     public Appointment reserve(Long slotId, Long patientId, Motif motif) {

@@ -46,8 +46,10 @@ public class GoogleCalendarService {
                 redirectUri,
                 List.of(CalendarScopes.CALENDAR_EVENTS))
                 .setAccessType("offline")
+                .setApprovalPrompt("force")  // 🔥 Ajout obligatoire pour forcer Google à redonner un refresh_token
                 .setState(doctorId.toString())
                 .build();
+
     }
 
     /**

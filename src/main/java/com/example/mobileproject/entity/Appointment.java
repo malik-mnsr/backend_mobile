@@ -55,9 +55,8 @@ public class Appointment {
     @Column(length = 20, nullable = false)
     private AppointmentStatus status = AppointmentStatus.CONFIRMED;
 
-    /** Notes libres côté médecin */
-    @Column(columnDefinition = "TEXT")
-    private String notes;
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private MedicalRecord medicalRecord;
 
     /** ID brut de l’événement Google Calendar (si besoin) */
     @Column(length = 128)

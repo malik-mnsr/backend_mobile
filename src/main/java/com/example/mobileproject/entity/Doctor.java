@@ -1,5 +1,6 @@
 package com.example.mobileproject.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.ArrayList;
@@ -56,7 +57,7 @@ public class Doctor {
     /** Token FCM du device mobile du médecin */
     @Column(name = "fcm_token", length = 512)
     private String fcmToken;
-
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference  // <- CORRECT: parent side
     private List<Patient> patients = new ArrayList<>();
 }

@@ -1,16 +1,22 @@
 package com.example.mobileproject.controller;
 
 import com.example.mobileproject.dto.PatientDTO;
+import com.example.mobileproject.dto.PatientRequestWithBase64;
+import com.example.mobileproject.entity.Doctor;
 import com.example.mobileproject.entity.Patient;
 import com.example.mobileproject.service.PatientService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,7 +52,7 @@ public class PatientController {
     }
 
     @GetMapping("/doctor/{doctorId}")
-    public ResponseEntity<List<PatientDTO>> getByDoctor(@PathVariable Long doctorId) {
+    public ResponseEntity<List<PatientDTO>> getPatientsByDoctor(@PathVariable Long doctorId) {
         return ResponseEntity.ok(
                 patientService.getPatientsByDoctor(doctorId).stream()
                         .map(patientService::toDto)
@@ -81,5 +87,54 @@ public class PatientController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(patientService.getContentType(id)))
                 .body(patientService.getProfilePicture(id));
+    }
+    @PostMapping(path = "/create-patient/with-picture-base64", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Transactional
+    public ResponseEntity<Patient> createPatientWithPictureBase64(
+            @RequestBody PatientRequestWithBase64 request) throws IOException {
+
+        // Create new patient entity
+        Patient patient = new Patient();
+        patient.setFirstName(request.getFirstName());
+        patient.setLastName(request.getLastName());
+        patient.setAge(request.getAge());
+        patient.setEmail(request.getEmail());
+        patient.setPhone(request.getPhone());
+        patient.setAddress(request.getAddress());
+        patient.setDoctor(request.getDoctorId());
+        System.out.println(request.getDoctorId() + " " + request.getFirstName() + " " + request.getLastName());
+        if (request.getProfilePictureBase64() != null && !request.getProfilePictureBase64().isEmpty()) {
+            try {
+                String base64Data = request.getProfilePictureBase64().trim();
+                String contentType = "image/jpeg"; // default value
+                String base64Image;
+
+                if (base64Data.contains(",")) {
+                    // Handle data URI scheme
+                    String[] parts = base64Data.split(",", 2);
+                    String meta = parts[0];
+                    base64Image = parts[1];
+                    if (meta.contains(":") && meta.contains(";")) {
+                        contentType = meta.split(":")[1].split(";")[0];
+                    }
+                } else {
+                    // Handle raw Base64 string
+                    base64Image = base64Data;
+                }
+
+                base64Image = base64Image.replaceAll("\\s+", "");
+                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                patient.setProfilePicture(imageBytes);
+                patient.setProfilePictureContentType(contentType);
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid image data");
+            }
+        }
+        Patient savedPatient;
+
+                savedPatient = patientService.createPatient(patient, patient.getDoctor().getId());
+
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedPatient);
     }
 }

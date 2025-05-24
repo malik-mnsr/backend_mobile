@@ -1,10 +1,13 @@
 package com.example.mobileproject.service;
 
 import com.example.mobileproject.dto.PatientDTO;
+import com.example.mobileproject.entity.Doctor;
 import com.example.mobileproject.entity.Patient;
+import com.example.mobileproject.repository.DoctorRepository;
 import com.example.mobileproject.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -15,7 +18,7 @@ import java.util.List;
 public class PatientService {
 
     private final PatientRepository patientRepo;
-    private final DoctorService     doctorService;
+    private final DoctorRepository doctorService;
 
     /* ─────────── CREATE ─────────── */
     public Patient createPatient(Patient p, Long doctorId) {
@@ -71,6 +74,7 @@ public class PatientService {
         return getPatientById(patientId)
                 .getProfilePictureContentType();
     }
+
     public PatientDTO toDto(Patient p) {
         return new PatientDTO(
                 p.getId(),
@@ -83,4 +87,4 @@ public class PatientService {
         );
     }
 
-}
+    }

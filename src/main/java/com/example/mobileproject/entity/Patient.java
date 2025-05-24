@@ -1,5 +1,7 @@
 package com.example.mobileproject.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -41,7 +43,10 @@ public class Patient {
     @Column(length = 50)  // e.g., "image/png", "image/jpeg"
     private String profilePictureContentType;
 
+    // Patient.java
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id")  // Foreign key to Doctor
+    @JoinColumn(name = "doctor_id")
+    @JsonBackReference
     private Doctor doctor;
+
 }

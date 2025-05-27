@@ -3,6 +3,7 @@ package com.example.mobileproject.controller;
 import com.example.mobileproject.dto.PatientDTO;
 import com.example.mobileproject.dto.PatientRequestWithBase64;
 import com.example.mobileproject.entity.Doctor;
+import com.example.mobileproject.entity.Motif;
 import com.example.mobileproject.entity.Patient;
 import com.example.mobileproject.service.PatientService;
 import jakarta.persistence.EntityNotFoundException;
@@ -73,6 +74,17 @@ public class PatientController {
         patientService.deletePatient(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/motif/{motif}")
+    public ResponseEntity<List<PatientDTO>> getPatientsByMotif(@PathVariable String motif) {
+        try {
+            Motif m = Motif.valueOf(motif.toUpperCase());
+            List<PatientDTO> dtos = patientService.getPatientsByMotif(m);
+            return ResponseEntity.ok(dtos);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
 
     /* ─────────── PHOTO DE PROFIL ─────────── */
     @PostMapping(value = "/{id}/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

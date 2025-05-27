@@ -2,6 +2,7 @@ package com.example.mobileproject.service;
 
 import com.example.mobileproject.dto.PatientDTO;
 import com.example.mobileproject.entity.Doctor;
+import com.example.mobileproject.entity.Motif;
 import com.example.mobileproject.entity.Patient;
 import com.example.mobileproject.repository.DoctorRepository;
 import com.example.mobileproject.repository.PatientRepository;
@@ -12,20 +13,22 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PatientService {
 
     private final PatientRepository patientRepo;
-    private final DoctorRepository doctorService;
+    private final DoctorRepository doctorRepo;   // ← plus clair
+
 
     /* ─────────── CREATE ─────────── */
     public Patient createPatient(Patient p, Long doctorId) {
         if (patientRepo.existsByEmail(p.getEmail())) {
             throw new IllegalStateException("Email already used");
         }
-        p.setDoctor(doctorService.getDoctorById(doctorId));
+        p.setDoctor(doctorRepo.getDoctorById(doctorId));
         return patientRepo.save(p);
     }
 
@@ -74,6 +77,13 @@ public class PatientService {
         return getPatientById(patientId)
                 .getProfilePictureContentType();
     }
+    public List<PatientDTO> getPatientsByMotif(Motif motif) {
+        return patientRepo.findAllByMotif(motif)
+                .stream()
+                .map(this::toDto)   // méthode toDto déjà existante
+                .collect(Collectors.toList());
+    }
+
 
     public PatientDTO toDto(Patient p) {
         return new PatientDTO(

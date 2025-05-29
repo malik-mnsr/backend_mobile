@@ -26,12 +26,14 @@ public class NotificationService {
         Doctor doc = appt.getSlot().getDoctor();
         String token = doc.getFcmToken();
 
-        // Ne pas notifier si pas de token, en "Do Not Disturb" ou "Absent"
-        if (token == null
-                || doc.getCurrentMode() == WorkingMode.DND
-                || doc.getCurrentMode() == WorkingMode.ABSENT) {
+        // Ne pas notifier si…
+        if (token == null) return;
+        if (doc.getCurrentMode() == WorkingMode.DND || doc.getCurrentMode() == WorkingMode.ABSENT)
             return;
-        }
+        if (doc.getCurrentMode() == WorkingMode.CONSULTATION
+                && appt.getMotif() != Motif.EMERGENCY)
+            return;   // on coupe tout sauf l’urgence
+
 
         // Construire le titre selon le motif
         String title;

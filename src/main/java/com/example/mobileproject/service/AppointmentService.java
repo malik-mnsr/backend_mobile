@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -159,4 +160,19 @@ public class AppointmentService {
                 a.getGoogleEventLink()
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<Appointment> queueForToday(Long doctorId) {
+        return appRepo.queueForToday(doctorId);
+    }
+    // AppointmentService.java
+    @Transactional(readOnly = true)
+    public List<Appointment> queueFiltered(Long docId,
+                                           LocalDate date,
+                                           Motif motif) {
+        // si date == null → today
+        LocalDate target = date != null ? date : LocalDate.now();
+        return appRepo.queueFiltered(docId, target, motif);
+    }
+
 }

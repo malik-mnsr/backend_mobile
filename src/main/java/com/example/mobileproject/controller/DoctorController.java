@@ -4,6 +4,7 @@ import com.example.mobileproject.dto.DoctorDTO;
 import com.example.mobileproject.dto.DoctorRequestWithBase64;
 import com.example.mobileproject.entity.Doctor;
 import com.example.mobileproject.entity.Patient;
+import com.example.mobileproject.entity.WorkingMode;
 import com.example.mobileproject.service.DoctorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,147 +25,147 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DoctorController {
 
-    private final DoctorService doctorService;
+    /** Service unique (fini les doublons) */
+    private final DoctorService service;
+
+    /* ─────────────────────────── CRUD de base ─────────────────────────── */
 
     @PostMapping
     public ResponseEntity<DoctorDTO> createDoctor(@RequestBody Doctor doctor) {
-        Doctor saved = doctorService.createDoctor(doctor);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(doctorService.toDto(saved));
+        Doctor saved = service.createDoctor(doctor);
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.toDto(saved));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<DoctorDTO> getDoctor(@PathVariable Long id) {
-        return ResponseEntity.ok(
-                doctorService.toDto(
-                        doctorService.getDoctorById(id)
-                )
-        );
+        return ResponseEntity.ok(service.toDto(service.getDoctorById(id)));
     }
 
     @GetMapping
     public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
-        List<DoctorDTO> dtos = doctorService.getAllDoctors()
+        List<DoctorDTO> dtos = service.getAllDoctors()
                 .stream()
-                .map(doctorService::toDto)
+                .map(service::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/specialty/{specialty}")
     public ResponseEntity<List<Doctor>> getBySpecialty(@PathVariable String specialty) {
-        return ResponseEntity.ok(doctorService.getDoctorsBySpecialty(specialty));
+        return ResponseEntity.ok(service.getDoctorsBySpecialty(specialty));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DoctorDTO> updateDoctor(
-            @PathVariable Long id,
-            @RequestBody Doctor doctor
-    ) {
-        Doctor updated = doctorService.updateDoctor(id, doctor);
-        return ResponseEntity.ok(doctorService.toDto(updated));
+    public ResponseEntity<DoctorDTO> updateDoctor(@PathVariable Long id,
+                                                  @RequestBody Doctor doctor) {
+        Doctor updated = service.updateDoctor(id, doctor);
+        return ResponseEntity.ok(service.toDto(updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDoctor(@PathVariable Long id) {
-        doctorService.deleteDoctor(id);
+        service.deleteDoctor(id);
         return ResponseEntity.noContent().build();
     }
 
+    /* ──────────────────────── Photo de profil ─────────────────────────── */
+
     @PostMapping(value = "/{id}/profile-picture",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> uploadProfilePicture(
-            @PathVariable Long id,
-            @RequestParam("file") MultipartFile file
-    ) throws IOException {
-        doctorService.updateProfilePicture(id, file);
+    public ResponseEntity<Void> uploadProfilePicture(@PathVariable Long id,
+                                                     @RequestParam("file") MultipartFile file)
+            throws IOException {
+        service.updateProfilePicture(id, file);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/profile-picture")
     public ResponseEntity<byte[]> getProfilePicture(@PathVariable Long id) {
         return ResponseEntity.ok()
-                .contentType(
-                        MediaType.parseMediaType(
-                                doctorService.getContentType(id)
-                        )
-                )
-                .body(doctorService.getProfilePicture(id));
+                .contentType(MediaType.parseMediaType(service.getContentType(id)))
+                .body(service.getProfilePicture(id));
     }
+
+    /* ─────────────────────────── Auth simplifiée ──────────────────────── */
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam(required = true) String email, @RequestParam(required = true) String phone) {
-        if (email.isEmpty() || phone.isEmpty()) {
+    public ResponseEntity<?> login(@RequestParam String email,
+                                   @RequestParam String phone) {
+
+        if (email.isBlank() || phone.isBlank()) {
             return ResponseEntity.badRequest().body("Email and phone are required.");
         }
-
-        // Authenticate doctor using email and phone
-        Doctor doctor = doctorService.getDoctorByEmailAndPhone(email, phone);
-
-        if (doctor != null) {
-            return ResponseEntity.ok(doctor); // Return the Doctor object if authentication is successful
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
-        }
+        Doctor doctor = service.getDoctorByEmailAndPhone(email, phone);
+        return ResponseEntity.ok(doctor);
     }
-    @PostMapping(path = "/create-doctor/with-picture-base64", consumes = MediaType.APPLICATION_JSON_VALUE)
+
+    /* ───────────────────── Création via Base64 (facultatif) ───────────── */
+
+    @PostMapping(path = "/create-doctor/with-picture-base64",
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Doctor> createDoctorWithPictureBase64(
-            @RequestBody DoctorRequestWithBase64 request) throws IOException {  // New DTO with Base64 field
+            @RequestBody DoctorRequestWithBase64 req) throws IOException {
 
         Doctor doctor = new Doctor();
-        doctor.setFirstName(request.getFirstName());
-        doctor.setLastName(request.getLastName());
-        doctor.setAge(request.getAge());
-        doctor.setEmail(request.getEmail());
-        doctor.setSpecialty(request.getSpecialty());
-        doctor.setPhone(request.getPhone());
-        doctor.setCurrentMode(request.getCurrentMode());
+        doctor.setFirstName(req.getFirstName());
+        doctor.setLastName(req.getLastName());
+        doctor.setAge(req.getAge());
+        doctor.setEmail(req.getEmail());
+        doctor.setSpecialty(req.getSpecialty());
+        doctor.setPhone(req.getPhone());
+        doctor.setCurrentMode(req.getCurrentMode());
         doctor.setPatients(new ArrayList<>());
 
-        // Handle Base64 image if present
-        String base64Data = request.getProfilePictureBase64().trim();
-        String contentType = "image/jpeg"; // valeur par défaut, si le préfixe est absent
-        String base64Image;
+        /* Décodage de l’image Base64 */
+        if (req.getProfilePictureBase64() != null && !req.getProfilePictureBase64().isBlank()) {
+            String data  = req.getProfilePictureBase64().trim();
+            String meta  = "image/jpeg";
+            String base;
 
-        if (base64Data.contains(",")) {
-            // Chaîne avec préfixe type: "data:image/jpeg;base64,..."
-            String[] parts = base64Data.split(",", 2);
-            String meta = parts[0]; // e.g., "data:image/jpeg;base64"
-            base64Image = parts[1];
-            if (meta.contains(":") && meta.contains(";")) {
-                contentType = meta.split(":")[1].split(";")[0]; // Extrait "image/jpeg"
-            }
-        } else {
-            // Chaîne brute (pas de préfixe)
-            base64Image = base64Data;
+            if (data.contains(",")) {
+                String[] parts = data.split(",", 2);
+                meta = parts[0].split(":")[1].split(";")[0];   // ex: image/png
+                base = parts[1];
+            } else base = data;
+
+            byte[] img = Base64.getDecoder().decode(base.replaceAll("\\s+", ""));
+            doctor.setProfilePicture(img);
+            doctor.setProfilePictureContentType(meta);
         }
 
-        base64Image = base64Image.replaceAll("\\s+", ""); // Nettoyer les espaces et sauts de ligne
-        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-        doctor.setProfilePicture(imageBytes);
-        doctor.setProfilePictureContentType(contentType);
-
-        // Handle patients (same as before)
-        if (request.getPatients() != null && !request.getPatients().isEmpty()) {
-            List<Patient> patients = request.getPatients().stream().map(p -> {
-                Patient patient = new Patient();
-                patient.setFirstName(p.getFirstName());
-                patient.setLastName(p.getLastName());
-                patient.setAge(p.getAge());
-                patient.setEmail(p.getEmail());
-                patient.setPhone(p.getPhone());
-                patient.setAddress(p.getAddress());
-                patient.setDoctor(doctor);
-                return patient;
-            }).collect(Collectors.toList());
+        /* Patients éventuels inclus dans la requête */
+        if (req.getPatients() != null) {
+            List<Patient> patients = req.getPatients().stream().map(p -> {
+                Patient pat = new Patient();
+                pat.setFirstName(p.getFirstName());
+                pat.setLastName(p.getLastName());
+                pat.setAge(p.getAge());
+                pat.setEmail(p.getEmail());
+                pat.setPhone(p.getPhone());
+                pat.setAddress(p.getAddress());
+                pat.setDoctor(doctor);
+                return pat;
+            }).toList();
             doctor.setPatients(patients);
         }
 
-        Doctor savedDoctor = doctorService.createDoctor(doctor);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedDoctor);
+        Doctor saved = service.createDoctor(doctor);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    /* ───────────────────────── Modes intelligents ─────────────────────── */
 
+    /** Lire le mode courant du médecin */
+    @GetMapping("/{doctorId}/mode")
+    public ResponseEntity<WorkingMode> getMode(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(service.getMode(doctorId));
+    }
+
+    /** Mettre à jour le mode courant */
+    @PutMapping("/{doctorId}/mode")
+    public ResponseEntity<Void> setMode(@PathVariable Long doctorId,
+                                        @RequestBody String mode) {
+        service.updateMode(doctorId, WorkingMode.valueOf(mode.toUpperCase()));
+        return ResponseEntity.noContent().build();
+    }
 }
-

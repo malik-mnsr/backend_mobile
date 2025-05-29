@@ -5,12 +5,15 @@ import com.example.mobileproject.dto.ReserveRequest;
 import com.example.mobileproject.entity.Appointment;
 import com.example.mobileproject.entity.Motif;
 import com.example.mobileproject.service.AppointmentService;
+import com.example.mobileproject.service.DoctorService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,7 +23,7 @@ import java.util.stream.Collectors;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
-
+    private final DoctorService service;
     /** 1. Réserver un créneau */
     @PostMapping("/reserve/{slotId}")
     public ResponseEntity<AppointmentDTO> reserve(
@@ -77,4 +80,33 @@ public class AppointmentController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
+
+
+    // AppointmentController.java
+    @GetMapping("/doctor/{doctorId}/queue/today")
+    public List<AppointmentDTO> queueToday(@PathVariable Long doctorId) {
+        return appointmentService.queueFiltered(doctorId,
+                        LocalDate.now(), null)
+                .stream().map(appointmentService::toDto).toList();
+    }
+
+    @GetMapping("/doctor/{doctorId}/queue/today/{motif}")
+    public List<AppointmentDTO> queueTodayMotif(@PathVariable Long doctorId,
+                                                @PathVariable Motif motif) {
+        return appointmentService.queueFiltered(doctorId,
+                        LocalDate.now(), motif)
+                .stream().map(appointmentService::toDto).toList();
+    }
+
+    /* Variante libre : /queue/{yyyy-MM-dd}/{motif?} */
+    @GetMapping("/doctor/{doctorId}/queue/{date}/{motif}")
+    public List<AppointmentDTO> queueDateMotif(
+            @PathVariable Long doctorId,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @PathVariable Motif motif) {
+        return appointmentService.queueFiltered(doctorId, date, motif)
+                .stream().map(appointmentService::toDto).toList();
+    }
+
+
 }

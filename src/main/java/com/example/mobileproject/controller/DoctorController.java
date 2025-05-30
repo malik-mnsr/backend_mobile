@@ -4,6 +4,7 @@ import com.example.mobileproject.dto.DoctorDTO;
 import com.example.mobileproject.dto.DoctorRequestWithBase64;
 import com.example.mobileproject.entity.Doctor;
 import com.example.mobileproject.entity.Patient;
+import com.example.mobileproject.entity.WorkingMode;
 import com.example.mobileproject.service.DoctorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -92,9 +93,12 @@ public class DoctorController {
                 )
                 .body(doctorService.getProfilePicture(id));
     }
-
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam(required = true) String email, @RequestParam(required = true) String phone) {
+    public ResponseEntity<?> login(
+            @RequestParam String email,
+            @RequestParam String phone,
+            @RequestParam(required = false) String fcmToken) {  // <-- new param
+
         if (email.isEmpty() || phone.isEmpty()) {
             return ResponseEntity.badRequest().body("Email and phone are required.");
         }
@@ -103,14 +107,20 @@ public class DoctorController {
         Doctor doctor = doctorService.getDoctorByEmailAndPhone(email, phone);
 
         if (doctor != null) {
-            return ResponseEntity.ok(doctor); // Return the Doctor object if authentication is successful
+            // Update FCM token if provided
+            if (fcmToken != null && !fcmToken.isEmpty()) {
+                doctor.setFcmToken(fcmToken);
+                doctorService.createDoctor(doctor); // Make sure you have a save method in doctorService
+            }
+
+            return ResponseEntity.ok(doctor); // Return doctor with updated token
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }
     }
     @PostMapping(path = "/create-doctor/with-picture-base64", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Doctor> createDoctorWithPictureBase64(
-            @RequestBody DoctorRequestWithBase64 request) throws IOException {  // New DTO with Base64 field
+            @RequestBody DoctorRequestWithBase64 request) throws IOException {
 
         Doctor doctor = new Doctor();
         doctor.setFirstName(request.getFirstName());
@@ -122,30 +132,33 @@ public class DoctorController {
         doctor.setCurrentMode(request.getCurrentMode());
         doctor.setPatients(new ArrayList<>());
 
-        // Handle Base64 image if present
+        // ✅ Handle FCM token
+        if (request.getFcmToken() != null && !request.getFcmToken().isEmpty()) {
+            doctor.setFcmToken(request.getFcmToken());
+        }
+
+        // ✅ Handle Base64 image
         String base64Data = request.getProfilePictureBase64().trim();
-        String contentType = "image/jpeg"; // valeur par défaut, si le préfixe est absent
+        String contentType = "image/jpeg"; // default
         String base64Image;
 
         if (base64Data.contains(",")) {
-            // Chaîne avec préfixe type: "data:image/jpeg;base64,..."
             String[] parts = base64Data.split(",", 2);
             String meta = parts[0]; // e.g., "data:image/jpeg;base64"
             base64Image = parts[1];
             if (meta.contains(":") && meta.contains(";")) {
-                contentType = meta.split(":")[1].split(";")[0]; // Extrait "image/jpeg"
+                contentType = meta.split(":")[1].split(";")[0];
             }
         } else {
-            // Chaîne brute (pas de préfixe)
             base64Image = base64Data;
         }
 
-        base64Image = base64Image.replaceAll("\\s+", ""); // Nettoyer les espaces et sauts de ligne
+        base64Image = base64Image.replaceAll("\\s+", "");
         byte[] imageBytes = Base64.getDecoder().decode(base64Image);
         doctor.setProfilePicture(imageBytes);
         doctor.setProfilePictureContentType(contentType);
 
-        // Handle patients (same as before)
+        // ✅ Handle patients
         if (request.getPatients() != null && !request.getPatients().isEmpty()) {
             List<Patient> patients = request.getPatients().stream().map(p -> {
                 Patient patient = new Patient();
@@ -161,10 +174,28 @@ public class DoctorController {
             doctor.setPatients(patients);
         }
 
+        // ✅ Save doctor
         Doctor savedDoctor = doctorService.createDoctor(doctor);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedDoctor);
     }
 
+
+    /** Lire le mode courant du médecin */
+    @GetMapping("/{doctorId}/mode")
+    public ResponseEntity<WorkingMode> getMode(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(doctorService.getMode(doctorId));
+    }
+
+    /** Mettre à jour le mode courant */
+    @PutMapping("/{doctorId}/mode")
+    public ResponseEntity<Void> setMode(@PathVariable Long doctorId,
+                                        @RequestBody String mode) {
+        doctorService.updateMode(
+                doctorId,
+                WorkingMode.valueOf(mode.replace("\"", "").toUpperCase())
+        );
+        return ResponseEntity.noContent().build();
+    }
 
 }
 

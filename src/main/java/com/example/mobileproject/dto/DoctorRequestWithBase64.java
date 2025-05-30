@@ -19,6 +19,6 @@ public class DoctorRequestWithBase64 {
 
 
     private String profilePictureBase64;
-
+    private String fcmToken; // <-- Add this
     private List<PatientRequest> patients;   // sous‑DTO défini plus bas
 }

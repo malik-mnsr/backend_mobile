@@ -10,12 +10,14 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
     private final DoctorRepository doctorRepo;
     private final FirebaseMessaging fcm;
 
@@ -36,15 +38,20 @@ public class NotificationService {
         // Construire le titre selon le motif
         String title;
         switch (appt.getMotif()) {
-            case HOME_VISIT:  title = "Nouvelle visite à domicile"; break;
-            case EMERGENCY:   title = "Nouvelle urgence médicale"; break;
-            default:          title = "Nouvelle demande de RDV";
+            case HOME_VISIT:
+                title = "Nouvelle visite à domicile";
+                break;
+            case EMERGENCY:
+                title = "Nouvelle urgence médicale";
+                break;
+            default:
+                title = "Nouvelle demande de RDV";
         }
 
         // Corps = nom du patient + date + heure
         String body = appt.getPatient().getFirstName()
                 + " " + appt.getPatient().getLastName()
-                + " – " + appt.getStart().toLocalDate()
+                + " – " + appt.getStart().toString()
                 + " à " + appt.getStart().toLocalTime();
 
         Message msg = Message.builder()
@@ -56,9 +63,10 @@ public class NotificationService {
                 .build();
 
         try {
-            fcm.send(msg);
+            String response = fcm.send(msg);
+            log.info("Notification sent: {}", response);
         } catch (FirebaseMessagingException e) {
-            System.err.println("Erreur FCM : " + e.getMessage());
+            log.error("FCM error: {}", e.getMessage(), e);
         }
     }
 }

@@ -93,12 +93,9 @@ public class DoctorController {
                 )
                 .body(doctorService.getProfilePicture(id));
     }
-    @PostMapping("/login")
-    public ResponseEntity<?> login(
-            @RequestParam String email,
-            @RequestParam String phone,
-            @RequestParam(required = false) String fcmToken) {  // <-- new param
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestParam(required = true) String email, @RequestParam(required = true) String phone) {
         if (email.isEmpty() || phone.isEmpty()) {
             return ResponseEntity.badRequest().body("Email and phone are required.");
         }
@@ -107,13 +104,7 @@ public class DoctorController {
         Doctor doctor = doctorService.getDoctorByEmailAndPhone(email, phone);
 
         if (doctor != null) {
-            // Update FCM token if provided
-            if (fcmToken != null && !fcmToken.isEmpty()) {
-                doctor.setFcmToken(fcmToken);
-                doctorService.createDoctor(doctor); // Make sure you have a save method in doctorService
-            }
-
-            return ResponseEntity.ok(doctor); // Return doctor with updated token
+            return ResponseEntity.ok(doctor); // Return the Doctor object if authentication is successful
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }

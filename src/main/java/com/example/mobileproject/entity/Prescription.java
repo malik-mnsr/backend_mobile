@@ -1,46 +1,35 @@
 package com.example.mobileproject.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.LocalDate;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
-@Table(name = "prescriptions")
+@Getter @Setter @NoArgsConstructor
 public class Prescription {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer prescriptionId;
+    private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "record_id", nullable = false, unique = true)
-    private MedicalRecord record;
+    /** Ordonnance liée à un dossier médical existant */
+    @ManyToOne(optional = false)
+    private MedicalRecord medicalRecord;
 
-    @Column(columnDefinition = "JSON", nullable = false)
-    private String medications;  // e.g., [{"name":"Amoxicillin","dosage":"500mg","frequency":"2x daily"}]
+    /** Notes générales (« Prendre pendant les repas », etc.) */
+    private String note;
 
-    @Column(nullable = false)
-    private Integer validityDays = 30;  // Default 30-day validity
+    /** Lignes de médicament : cascade + suppression orpheline */
+    @OneToMany(mappedBy = "prescription",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
+    private List<MedicationLine> medications = new ArrayList<>();
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20, nullable = false)
-    private PrescriptionStatus status = PrescriptionStatus.ACTIVE;
-
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
-    private boolean sentToPharmacy;
-
-    @Column(length = 200)
-    private String pharmacyDetails;
-
-    @Column(nullable = false, updatable = false)
-    private LocalDate dateIssued = LocalDate.now();
-
-
-
+    /** Date de création, pour l’historique */
+    private Instant dateCreated = Instant.now();
 }

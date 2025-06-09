@@ -1,5 +1,10 @@
 package com.example.mobileproject.entity;
 
 public enum WorkingMode {
-    CONSULTATION, HOME_VISIT, EMERGENCY, AWAY, NORMAL
+    NORMAL,          // mode par défaut
+    CONSULTATION,    // en consultation
+    HOME_VISIT,      // visite à domicile
+    DND,             // “Do Not Disturb” / Ne pas déranger
+    EMERGENCY,
+    ABSENT// absent
 }

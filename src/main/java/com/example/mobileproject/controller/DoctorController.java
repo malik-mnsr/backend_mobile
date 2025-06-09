@@ -1,6 +1,6 @@
 package com.example.mobileproject.controller;
 
-
+import com.example.mobileproject.dto.DoctorDTO;
 import com.example.mobileproject.dto.DoctorRequestWithBase64;
 import com.example.mobileproject.entity.Doctor;
 import com.example.mobileproject.entity.Patient;
@@ -19,26 +19,38 @@ import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://192.168.224.33")  // Adjust as needed
 @RestController
 @RequestMapping("/api/doctors")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class DoctorController {
+
     private final DoctorService doctorService;
 
     @PostMapping
-    public ResponseEntity<Doctor> createDoctor(@RequestBody Doctor doctor) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(doctorService.createDoctor(doctor));
+    public ResponseEntity<DoctorDTO> createDoctor(@RequestBody Doctor doctor) {
+        Doctor saved = doctorService.createDoctor(doctor);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(doctorService.toDto(saved));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Doctor> getDoctor(@PathVariable Integer id) {
-        return ResponseEntity.ok(doctorService.getDoctorById(id));
+    public ResponseEntity<DoctorDTO> getDoctor(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                doctorService.toDto(
+                        doctorService.getDoctorById(id)
+                )
+        );
     }
 
     @GetMapping
-    public ResponseEntity<List<Doctor>> getAllDoctors() {
-        return ResponseEntity.ok(doctorService.getAllDoctors());
+    public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
+        List<DoctorDTO> dtos = doctorService.getAllDoctors()
+                .stream()
+                .map(doctorService::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/specialty/{specialty}")
@@ -47,28 +59,38 @@ public class DoctorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Doctor> updateDoctor(@PathVariable Integer id, @RequestBody Doctor doctor) {
-        return ResponseEntity.ok(doctorService.updateDoctor(id, doctor));
+    public ResponseEntity<DoctorDTO> updateDoctor(
+            @PathVariable Long id,
+            @RequestBody Doctor doctor
+    ) {
+        Doctor updated = doctorService.updateDoctor(id, doctor);
+        return ResponseEntity.ok(doctorService.toDto(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDoctor(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteDoctor(@PathVariable Long id) {
         doctorService.deleteDoctor(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/{id}/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{id}/profile-picture",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadProfilePicture(
-            @PathVariable Integer id,
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
         doctorService.updateProfilePicture(id, file);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/profile-picture")
-    public ResponseEntity<byte[]> getProfilePicture(@PathVariable Integer id) {
+    public ResponseEntity<byte[]> getProfilePicture(@PathVariable Long id) {
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(doctorService.getContentType(id)))
+                .contentType(
+                        MediaType.parseMediaType(
+                                doctorService.getContentType(id)
+                        )
+                )
                 .body(doctorService.getProfilePicture(id));
     }
 
@@ -87,10 +109,9 @@ public class DoctorController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }
     }
-
     @PostMapping(path = "/create-doctor/with-picture-base64", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Doctor> createDoctorWithPictureBase64(
-            @RequestBody DoctorRequestWithBase64 request) throws IOException {  // New DTO with Base64 field
+            @RequestBody DoctorRequestWithBase64 request) throws IOException {
 
         Doctor doctor = new Doctor();
         doctor.setFirstName(request.getFirstName());
@@ -102,30 +123,33 @@ public class DoctorController {
         doctor.setCurrentMode(request.getCurrentMode());
         doctor.setPatients(new ArrayList<>());
 
-        // Handle Base64 image if present
+        // ✅ Handle FCM token
+        if (request.getFcmToken() != null && !request.getFcmToken().isEmpty()) {
+            doctor.setFcmToken(request.getFcmToken());
+        }
+
+        // ✅ Handle Base64 image
         String base64Data = request.getProfilePictureBase64().trim();
-        String contentType = "image/jpeg"; // valeur par défaut, si le préfixe est absent
+        String contentType = "image/jpeg"; // default
         String base64Image;
 
         if (base64Data.contains(",")) {
-            // Chaîne avec préfixe type: "data:image/jpeg;base64,..."
             String[] parts = base64Data.split(",", 2);
             String meta = parts[0]; // e.g., "data:image/jpeg;base64"
             base64Image = parts[1];
             if (meta.contains(":") && meta.contains(";")) {
-                contentType = meta.split(":")[1].split(";")[0]; // Extrait "image/jpeg"
+                contentType = meta.split(":")[1].split(";")[0];
             }
         } else {
-            // Chaîne brute (pas de préfixe)
             base64Image = base64Data;
         }
 
-        base64Image = base64Image.replaceAll("\\s+", ""); // Nettoyer les espaces et sauts de ligne
+        base64Image = base64Image.replaceAll("\\s+", "");
         byte[] imageBytes = Base64.getDecoder().decode(base64Image);
         doctor.setProfilePicture(imageBytes);
         doctor.setProfilePictureContentType(contentType);
 
-        // Handle patients (same as before)
+        // ✅ Handle patients
         if (request.getPatients() != null && !request.getPatients().isEmpty()) {
             List<Patient> patients = request.getPatients().stream().map(p -> {
                 Patient patient = new Patient();
@@ -141,7 +165,28 @@ public class DoctorController {
             doctor.setPatients(patients);
         }
 
+        // ✅ Save doctor
         Doctor savedDoctor = doctorService.createDoctor(doctor);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedDoctor);
     }
+
+
+    /** Lire le mode courant du médecin */
+    @GetMapping("/{doctorId}/mode")
+    public ResponseEntity<WorkingMode> getMode(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(doctorService.getMode(doctorId));
+    }
+
+    /** Mettre à jour le mode courant */
+    @PutMapping("/{doctorId}/mode")
+    public ResponseEntity<Void> setMode(@PathVariable Long doctorId,
+                                        @RequestBody String mode) {
+        doctorService.updateMode(
+                doctorId,
+                WorkingMode.valueOf(mode.replace("\"", "").toUpperCase())
+        );
+        return ResponseEntity.noContent().build();
+    }
+
 }
+

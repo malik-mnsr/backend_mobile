@@ -1,24 +1,19 @@
 package com.example.mobileproject.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "doctors")
 public class Doctor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(length = 50)
     private String firstName;
@@ -38,17 +33,31 @@ public class Doctor {
     private String phone;
 
     @Lob
-    @Column(columnDefinition = "LONGBLOB")  // MySQL-specific large binary storage
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] profilePicture;
 
     @Column(length = 50)
     private String profilePictureContentType;
 
+    /** Mode de travail courant (enum WorkingMode) */
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "current_mode", length = 20)
     private WorkingMode currentMode = WorkingMode.NORMAL;
 
-    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Patient> patients = new ArrayList<>();
+    /** OAuth2 tokens pour Google Calendar */
+    @Column(length = 1024)
+    private String gAccessToken;
 
+    @Column(length = 1024)
+    private String gRefreshToken;
+
+    @Column
+    private Long gTokenExpiryMs;
+
+    /** Token FCM du device mobile du médecin */
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference  // <- CORRECT: parent side
+    private List<Patient> patients = new ArrayList<>();
 }

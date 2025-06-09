@@ -10,4 +10,6 @@ public class PatientRequest {
     private String email;
     private String phone;
     private String address;
+    private String profilePictureContentType;
+    private String profilePictureBase64;
 }

@@ -1,5 +1,7 @@
 package com.example.mobileproject.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,7 +17,7 @@ import lombok.Setter;
 public class Patient {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;  // Changed to Integer (optional, but matches MySQL's INT)
+    private Long id;  // Changed to Integer (optional, but matches MySQL's INT)
 
     @Column(length = 100, unique = true)  // Email should be unique and reasonably sized
     private String email;
@@ -41,7 +43,10 @@ public class Patient {
     @Column(length = 50)  // e.g., "image/png", "image/jpeg"
     private String profilePictureContentType;
 
+    // Patient.java
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id")  // Foreign key to Doctor
+    @JoinColumn(name = "doctor_id")
+    @JsonBackReference
     private Doctor doctor;
+
 }
